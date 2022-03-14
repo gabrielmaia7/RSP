@@ -102,9 +102,7 @@ class BaseTransformer(pl.LightningModule):
                 cache_dir=cache_dir,
             )
             new_tokens = [
-                AddedToken('<H>', rstrip=False, lstrip=False, single_word=True, normalized=False),
-                AddedToken('<R>', rstrip=False, lstrip=False, single_word=True, normalized=False),
-                AddedToken('<T>', rstrip=False, lstrip=False, single_word=True, normalized=False)
+                '<H>','<R>','<T>'
             ]
             new_tokens_vocab = {}
             new_tokens_vocab['additional_special_tokens'] = []

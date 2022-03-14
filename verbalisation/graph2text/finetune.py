@@ -536,6 +536,7 @@ class Graph2TextModule(SummarizationModule):
     def __init__(self, hparams, **kwargs):
         if type(hparams) == dict:
             hparams = argparse.Namespace(**hparams)
+        print(f'Graph2Text hparams are: {hparams}')
         super().__init__(hparams, **kwargs)
 
         self.hparams.update(vars(hparams))
