@@ -7,3 +7,6 @@ __pycache__/
 *.bin
 *.pt
 model.*
+
+# Big Files
+text_extraction/reference_html_as_sentences_df.csv
