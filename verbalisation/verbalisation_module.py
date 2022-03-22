@@ -1,17 +1,13 @@
-#from .graph2text.finetune import SummarizationModule, Graph2TextModule
 from .graph2text.finetune import Graph2TextModule
-#import argparse
-#import pytorch_lightning as pl
-#import os
-#import sys
-#from pathlib import Path
-#import pdb
 from typing import Dict, List, Tuple, Union, Optional
 import torch
 import re
 
-assert torch.cuda.is_available()
-assert torch.cuda.device_count() == 2
+if torch.cuda.is_available():
+    DEVICE = 'cuda'
+else:
+    DEVICE = 'cpu'
+    print('CUDA NOT AVAILABLE')
 
 DATA_DIR = 'verbalisation/graph2text/data/webnlg'
 OUTPUT_DIR = 'verbalisation/graph2text/outputs/port_test'
@@ -58,11 +54,43 @@ class VerbModule():
             raise
 
         return gen_output
+    
+    '''
+    We create this function as an alteration from [this one](https://github.com/huggingface/transformers/blob/198c335d219a5eb4d3f124fdd1ce1a9cd9f78a9b/src/transformers/tokenization_utils_fast.py#L537), mainly because the official 'tokenizer.decode' treats all special tokens the same, while we want to drop all special tokens from the decoded sentence EXCEPT for the <unk> token, which we will replace later on.
+    '''
+    def __decode_ids_to_string_custom(
+        self, token_ids: List[int], skip_special_tokens: bool = False, clean_up_tokenization_spaces: bool = True
+    ) -> str:
+        filtered_tokens = self.g2t_module.tokenizer.convert_ids_to_tokens(token_ids, skip_special_tokens=False)
+        # Do not remove special tokens yet
+
+        # To avoid mixing byte-level and unicode for byte-level BPT
+        # we need to build string separatly for added tokens and byte-level tokens
+        # cf. https://github.com/huggingface/transformers/issues/1133
+        sub_texts = []
+        current_sub_text = []
+        for token in filtered_tokens:
+            if skip_special_tokens and\
+                token != self.g2t_module.tokenizer.unk_token and\
+                token in self.g2t_module.tokenizer.all_special_tokens:
+
+                continue
+            else:
+                current_sub_text.append(token)
+        if current_sub_text:
+            sub_texts.append(self.g2t_module.tokenizer.convert_tokens_to_string(current_sub_text))
+        text = " ".join(sub_texts)
+
+        if clean_up_tokenization_spaces:
+            clean_text = self.g2t_module.tokenizer.clean_up_tokenization(text)
+            return clean_text
+        else:
+            return text
 
     def __decode_sentences(self, encoded_sentences: Union[str, List[str]]):
         if type(encoded_sentences) == str:
             encoded_sentences = [encoded_sentences]
-        decoded_sentences = [self.g2t_module.tokenizer.decode(i, skip_special_tokens=True) for i in encoded_sentences]
+        decoded_sentences = [self.__decode_ids_to_string_custom(i, skip_special_tokens=True) for i in encoded_sentences]
         return decoded_sentences
         
     def verbalise_sentence(self, inputs: Union[str, List[str]]):
@@ -107,12 +135,16 @@ class VerbModule():
         return self.verbalise_sentence(verbalisation_inputs)
         
     def verbalise(self, input: Union[str, List, Dict]):
-        if (type(input) == str) or (type(input) == list and type(input[0]) == str):
-            return self.verbalise_sentence(input)
-        elif (type(input) == dict) or (type(input) == list and type(input[0]) == dict):
-            return self.verbalise_triples(input)
-        else:
-            return self.verbalise_triples(input)
+        try:
+            if (type(input) == str) or (type(input) == list and type(input[0]) == str):
+                return self.verbalise_sentence(input)
+            elif (type(input) == dict) or (type(input) == list and type(input[0]) == dict):
+                return self.verbalise_triples(input)
+            else:
+                return self.verbalise_triples(input)
+        except Exception:
+            print(f'ERROR VERBALISING {input}')
+            raise
                 
     def add_label_to_unk_replacer(self, label: str):
         N = self.unk_char_replace_sliding_window_size
