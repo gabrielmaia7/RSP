@@ -26,15 +26,16 @@ class VerbModule():
                 'output_dir': OUTPUT_DIR,
             }
         self.g2t_module = Graph2TextModule.load_from_checkpoint(CHECKPOINT, strict=False, **override_args)
+        self.tokenizer = self.g2t_module.tokenizer
         # Unk replacer
-        self.vocab = self.g2t_module.tokenizer.get_vocab()
+        self.vocab = self.tokenizer.get_vocab()
         self.convert_some_japanese_characters = True
         self.unk_char_replace_sliding_window_size = 2
         self.unknowns = []
 
     def __generate_verbalisations_from_inputs(self, inputs: Union[str, List[str]]):
         try:
-            inputs_encoding = self.g2t_module.tokenizer.prepare_seq2seq_batch(
+            inputs_encoding = self.tokenizer.prepare_seq2seq_batch(
                 inputs, truncation=True, max_length=MAX_LENGTH, return_tensors='pt'
             )
             
@@ -61,7 +62,7 @@ class VerbModule():
     def __decode_ids_to_string_custom(
         self, token_ids: List[int], skip_special_tokens: bool = False, clean_up_tokenization_spaces: bool = True
     ) -> str:
-        filtered_tokens = self.g2t_module.tokenizer.convert_ids_to_tokens(token_ids, skip_special_tokens=False)
+        filtered_tokens = self.tokenizer.convert_ids_to_tokens(token_ids, skip_special_tokens=False)
         # Do not remove special tokens yet
 
         # To avoid mixing byte-level and unicode for byte-level BPT
@@ -71,18 +72,18 @@ class VerbModule():
         current_sub_text = []
         for token in filtered_tokens:
             if skip_special_tokens and\
-                token != self.g2t_module.tokenizer.unk_token and\
-                token in self.g2t_module.tokenizer.all_special_tokens:
+                token != self.tokenizer.unk_token and\
+                token in self.tokenizer.all_special_tokens:
 
                 continue
             else:
                 current_sub_text.append(token)
         if current_sub_text:
-            sub_texts.append(self.g2t_module.tokenizer.convert_tokens_to_string(current_sub_text))
+            sub_texts.append(self.tokenizer.convert_tokens_to_string(current_sub_text))
         text = " ".join(sub_texts)
 
         if clean_up_tokenization_spaces:
-            clean_text = self.g2t_module.tokenizer.clean_up_tokenization(text)
+            clean_text = self.tokenizer.clean_up_tokenization(text)
             return clean_text
         else:
             return text
@@ -158,18 +159,32 @@ class VerbModule():
             label = label.replace('／','/')
             label = label.replace('〉','>')        
         
-        label_encoded = self.g2t_module.tokenizer.encode(label)
-        label_tokens = self.g2t_module.tokenizer.convert_ids_to_tokens(label_encoded)
-        label_token_to_string = self.g2t_module.tokenizer.convert_tokens_to_string(label_tokens)
-        unk_token_to_string = self.g2t_module.tokenizer.convert_tokens_to_string([self.g2t_module.tokenizer.unk_token])
+        label_encoded = self.tokenizer.encode(label)
+        label_tokens = self.tokenizer.convert_ids_to_tokens(label_encoded)
+        
+        # Here, we also remove </s> (eos) and <pad> tokens in the replacing key, because:
+        # 1) When the whole label is all unk:
+        #   label_token_to_string would be '<unk></s>', meaning the replacing key (which is the same) only replaces
+        #   the <unk> if it appears at the end of the sentence, which is not the desired effect.
+        #   But since this means ANY <unk> will be replaced by this, it would be good to only replace keys that are <unk>
+        #   on the last replacing pass.
+        # 2) On other cases, then the unk is in the label but not in its entirety, like in the start/end, it might
+        #   involve the starting <pad> token or the ending <eos> token on the replacing key, again forcing the replacement
+        #   to only happen if the label appears in the end of the sentence.
+        label_tokens = [t for t in label_tokens if t not in [
+            self.tokenizer.eos_token, self.tokenizer.pad_token
+        ]]
+
+        label_token_to_string = self.tokenizer.convert_tokens_to_string(label_tokens)
+        unk_token_to_string = self.tokenizer.convert_tokens_to_string([self.tokenizer.unk_token])
                 
         #print(label_encoded,label_tokens,label_token_to_string)
         
         match_unks_in_label = re.findall('(?:(?: )*<unk>(?: )*)+', label_token_to_string)
         if len(match_unks_in_label) > 0:
             # If the whole label is made of UNK
-            if (match_unks_in_label[0] + self.g2t_module.tokenizer.eos_token) == label_token_to_string:
-                #print('Label is all unks')
+            if (match_unks_in_label[0]) == label_token_to_string:
+                #print('Label is all unks')                    
                 self.unknowns[-1][label_token_to_string.strip()] = label
             # Else, there should be non-UNK characters in the label
             else:
@@ -181,7 +196,7 @@ class VerbModule():
                     
                                        
                     # Found a UNK
-                    if token == self.g2t_module.tokenizer.unk_token:
+                    if token == self.tokenizer.unk_token:
                         
                         # In case multiple UNK, exclude UNKs seen after this one, expand window to other side if possible
                         if len(match_unks_in_label) > 1:
@@ -190,16 +205,16 @@ class VerbModule():
                             #print(label_tokens[idx_before:idx_ahead])
                             #print('HERE!')
                             # Reduce on the right, expanding on the left
-                            while self.g2t_module.tokenizer.unk_token in label_tokens[idx+1:idx_ahead]:
+                            while self.tokenizer.unk_token in label_tokens[idx+1:idx_ahead]:
                                 idx_before = max(0,idx_before-1)
                                 idx_ahead = min(idx+2, idx_ahead-1)
                                 #print(label_tokens[idx_before:idx_ahead])
                             # Now just reduce on the left
-                            while self.g2t_module.tokenizer.unk_token in label_tokens[idx_before:idx]:
+                            while self.tokenizer.unk_token in label_tokens[idx_before:idx]:
                                 idx_before = min(idx-1,idx_before+2)
                                 #print(label_tokens[idx_before:idx_ahead])
 
-                        span = self.g2t_module.tokenizer.convert_tokens_to_string(label_tokens[idx_before:idx_ahead]).replace('</s>','')        
+                        span = self.tokenizer.convert_tokens_to_string(label_tokens[idx_before:idx_ahead])        
                         # First token of the label is UNK                        
                         if idx == 1 and label_tokens[0] == '▁':
                             #print('Label begins with unks')
@@ -214,9 +229,9 @@ class VerbModule():
                             )[0]
                             self.unknowns[-1][span.strip()] = replaced_span
                         # Last token of the label is UNK
-                        elif idx == len(label_tokens)-2 and label_tokens[-1] == self.g2t_module.tokenizer.eos_token:
+                        elif idx == len(label_tokens)-2 and label_tokens[-1] == self.tokenizer.eos_token:
                             #print('Label ends with unks')
-                            pre_idx = self.g2t_module.tokenizer.convert_tokens_to_string(label_tokens[idx_before:idx])
+                            pre_idx = self.tokenizer.convert_tokens_to_string(label_tokens[idx_before:idx])
                             pre_idx_unk_counts = pre_idx.count(unk_token_to_string)
                             to_replace = re.escape(span).replace(
                                     re.escape(unk_token_to_string),
@@ -235,7 +250,7 @@ class VerbModule():
                         # A token in-between the label is UNK                            
                         else:
                             #print('Label has unks in the middle')
-                            pre_idx = self.g2t_module.tokenizer.convert_tokens_to_string(label_tokens[idx_before:idx])
+                            pre_idx = self.tokenizer.convert_tokens_to_string(label_tokens[idx_before:idx])
 
                             to_replace = re.escape(span).replace(
                                 re.escape(unk_token_to_string),
@@ -261,6 +276,9 @@ class VerbModule():
             loop_n -= 1
             for unknowns in self.unknowns:
                 for k,v in unknowns.items():
+                    # Leave to replace all-unk labels at the last pass
+                    if k == '<unk>' and loop_n > 0:
+                        continue
                     # In case it is because the first letter of the sentence has been uppercased
                     if not k in sentence and k[0] == k[0].lower() and k[0].upper() == sentence[0]:
                         k = k[0].upper() + k[1:]
@@ -271,7 +289,9 @@ class VerbModule():
                     #print(k,'/',v,'/',sentence)
                     sentence = sentence.replace(k.strip(),v.strip(),1)
                     #sentence = re.sub(k, v, sentence)
+            # Removing final doublespaces
             sentence = re.sub(r'\s+', ' ', sentence).strip()
+            # Removing spaces before punctuation
             sentence = re.sub(r'\s([?.!",](?:\s|$))', r'\1', sentence)
         if empty_after:
             self.unknowns = []

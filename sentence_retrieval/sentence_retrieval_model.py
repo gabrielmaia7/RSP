@@ -1,9 +1,7 @@
 import torch
 import torch.nn as nn
-from bert_model import BertForSequenceEncoder
-from torch.autograd import Variable
-import numpy as np
 
+from .bert_model import BertForSequenceEncoder
 
 class sentence_retrieval_model(nn.Module):
     def __init__(self, args):
