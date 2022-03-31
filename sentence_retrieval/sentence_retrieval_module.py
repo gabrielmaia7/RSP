@@ -35,13 +35,16 @@ def process_sent(sentence):
 
 class SentenceRetrievalModule():
 
-    def __init__(self):
+    def __init__(self, max_len=None):
+        
+        if max_len:
+            ARGS['max_len'] = max_len
         
         self.tokenizer = BertTokenizer.from_pretrained(ARGS['bert_pretrain'], do_lower_case=False)
         self.model = sentence_retrieval_model(ARGS)
         self.model.load_state_dict(torch.load(ARGS['checkpoint'], map_location=torch.device('cpu'))['model'])
         if ARGS['cuda']:
-            model = model.cuda()
+            self.model = self.model.cuda()
 
     def score_sentence_pairs(self, inputs: List[Tuple[str]]):
         inputs_processed = [(process_sent(input[0]), process_sent(input[1])) for input in inputs]
