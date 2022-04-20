@@ -41,25 +41,25 @@ class TextualEntailmentModule():
         )
         self.model.to(DEVICE)
 
-    def get_pair_scores(self, claim, evidence):
-        
-        encodings = self.tokenizer(
-            [claim, evidence],
-            max_length= MAX_LEN,
-            return_token_type_ids=False,
-            padding='max_length',
-            truncation=True,
-            return_tensors='pt',
-        ).to(DEVICE)
-
-        self.model.eval()
-        with torch.no_grad():
-            probs = self.model(
-                input_ids=encodings['input_ids'],
-                attention_mask=encodings['attention_mask']
-            )
-        
-        return torch.softmax(probs.logits,dim=1).cpu().numpy()
+    #def get_pair_scores(self, claim, evidence):
+    #    
+    #    encodings = self.tokenizer(
+    #        [claim, evidence],
+    #        max_length= MAX_LEN,
+    #        return_token_type_ids=False,
+    #        padding='max_length',
+    #        truncation=True,
+    #        return_tensors='pt',
+    #    ).to(DEVICE)
+    #
+    #    self.model.eval()
+    #    with torch.no_grad():
+    #        probs = self.model(
+    #            input_ids=encodings['input_ids'],
+    #            attention_mask=encodings['attention_mask']
+    #        )
+    #    
+    #    return torch.softmax(probs.logits,dim=1).cpu().numpy()
 
     def get_batch_scores(self, claims, evidence):
 
