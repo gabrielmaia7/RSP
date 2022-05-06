@@ -10,3 +10,5 @@ model.*
 
 # Big Files
 text_extraction/reference_html_as_sentences_df.csv
+textual_entailment/data/support_data_v1/train_wikidecoded.csv
+textual_entailment/support_classification/data/support_train_old.csv
