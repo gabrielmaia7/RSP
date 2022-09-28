@@ -16,3 +16,8 @@ text_extraction/reference_html_as_sentences_df.csv
 verbalisation/graph2text/outputs/t5-base_13881/best_tfmr/pytorch_model.bin
 verbalisation/graph2text/outputs/t5-base_13881/val_avg_bleu=68.1000-step_count=5.ckpt
 verbalisation.log
+
+#sentence_retrieval
+sentence_retrieval/checkpoint/model.best.32.pt
+sentence_retrieval/checkpoint/model.best.bkp.pt
+sentence_retrieval/bert_base/pytorch_model.bin
