@@ -1,4 +1,4 @@
-The contents of this folder have been moved to another repository, [WD_Textual_References_Dataset]([https://github.com/gabrielmaia7/WD_Textual_References_Dataset](https://anonymous.4open.science/status/WD_Textual_References_Dataset-510B)), in which this task was taken as a bigger task of obtaining a suitable HTML-to-Text Wikidata Dataset for fact verification.
+The contents of this folder have been moved to another repository, [WD_Textual_References_Dataset](https://anonymous.4open.science/status/WD_Textual_References_Dataset-510B), in which this task was taken as a bigger task of obtaining a suitable HTML-to-Text Wikidata Dataset for fact verification.
 
 Firstly, no boilerplate removal was performed. We are trusting on the combination of the sentence selection module with a clean retrieval of well-formatted and significant natural language sentences to filter in important pieces of evidence, without the need to detect low-information and poor-formatted sentences in the HTML itself.
 
