@@ -21,3 +21,8 @@ verbalisation.log
 sentence_retrieval/checkpoint/model.best.32.pt
 sentence_retrieval/checkpoint/model.best.bkp.pt
 sentence_retrieval/bert_base/pytorch_model.bin
+
+#textual_entailment
+textual_entailment/data/support_data_v2/check_if_same_as_original_run.ipynb
+textual_entailment/models/*
+textual_entailment/old_versions_of_files/*
