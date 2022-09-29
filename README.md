@@ -109,3 +109,5 @@ This directory contains:
 - 7_Using_BERT_on_FEVER_with_Trainer_3_Classes_DATASET_V2_HYPER.ipynb: This notebook uses different hyper parameters to generate the v3 model/tokenizer. It also uses hyper-parameter tuning approaches (PBT and ASHA) to create the v4 models/tokenizers.
 - textual_entailment_df.json: This is WTR's 409 triple-reference pairs after exiting ProVe's textual entailment module.
 - textual_entailment_module.py: This script implements utilities to help access the model and its functionalities.
+
+**Note**: For a list of the conda environment under which this repository was developed, check *environment.yml*.
